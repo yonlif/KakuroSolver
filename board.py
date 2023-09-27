@@ -50,12 +50,13 @@ class BlackCell(Cell):
 
 class KakoroBoard:
     def __init__(self, board: List[List[Cell]]):
-        self.size: int = len(board)
+        self.dimensions: Tuple[int, int] = (len(board), len(board[0]))
+        assert all(len(row) == self.dimensions[1] for row in board)
         self.board: List[List[Cell]] = board
         self._set_all_visible_cells_relations()
 
     def __eq__(self, other):
-        if other.size != self.size:
+        if other.dimensions != self.dimensions:
             return False
 
         for other_row, self_row in zip(self.board, other.board):
@@ -64,66 +65,47 @@ class KakoroBoard:
                     return False
         return True
 
+    def iterate_rows(self):
+        for row in self.board:
+            yield row
+
+    def iterate_cols(self):
+        for x in range(self.dimensions[1]):
+            yield [self.board[y][x] for y in range(self.dimensions[0])]
+
     def is_solved(self):
         return all([c.value > 0 if type(c) == Cell else True for row in self.board for c in row])
 
-    def _set_all_visible_cells_relations(self) -> None:
+    @staticmethod
+    def _set_line_relations(line: List[Cell], direction: str):
         recent_constraint_cell: Optional[ConstraintCell] = None
-        row_connected: List[Cell] = []
-        col_connected: List[Cell] = []
-        for y, row in enumerate(self.board):
-            for x, item in enumerate(row):
-                if type(item) != Cell:  # TODO (Eilon): Use isintance? - NOOOOO isinstance checks if the object is also a child of another object, and so if item is `BlackCell` the expression will be True!!
-                    for connected_cell in row_connected:
-                        tmp_row_connected = row_connected.copy()
-                        tmp_row_connected.remove(connected_cell)
-                        connected_cell.visible_cells += tmp_row_connected
-                    if recent_constraint_cell:
-                        recent_constraint_cell.right.size = len(row_connected)
-                        recent_constraint_cell.right.visible_cells = row_connected.copy()
-                        recent_constraint_cell = None
-                    row_connected = []
-                    if type(item) == ConstraintCell and item.right.result is not None:
-                        recent_constraint_cell = item
-                else:
-                    row_connected.append(item)
-            for connected_cell in row_connected:
-                tmp_row_connected = row_connected.copy()
-                tmp_row_connected.remove(connected_cell)
-                connected_cell.visible_cells += tmp_row_connected
-            if recent_constraint_cell and recent_constraint_cell.right.visible_cells == []:
-                recent_constraint_cell.right.size = len(row_connected)
-                recent_constraint_cell.right.visible_cells = row_connected
-            row_connected = []
-            recent_constraint_cell = None
+        connected_cells: List[Cell] = []
+        line = list(line) + [BlackCell()]
+        for item in line:
+            if type(item) != Cell:  # TODO (Eilon): Use isintance?
+                for connected_cell in connected_cells:
+                    tmp_row_connected = connected_cells.copy()
+                    tmp_row_connected.remove(connected_cell)
+                    connected_cell.visible_cells += tmp_row_connected
+                if recent_constraint_cell:
+                    recent_constraint_cell.size = len(connected_cells)
+                    recent_constraint_cell.visible_cells = connected_cells.copy()
+                    recent_constraint_cell = None
+                connected_cells = []
 
-        for x in range(len(self.board[0])):
-            for y in range(len(self.board)):
-                item = self.board[y][x]
-                if type(item) != Cell:
-                    for connected_cell in col_connected:
-                        tmp_col_connected = col_connected.copy()
-                        tmp_col_connected.remove(connected_cell)
-                        connected_cell.visible_cells += tmp_col_connected
-                    if recent_constraint_cell:
-                        recent_constraint_cell.down.size = len(col_connected)
-                        recent_constraint_cell.down.visible_cells = col_connected.copy()
-                        recent_constraint_cell = None
-                    col_connected = []
+                if type(item) == ConstraintCell:
+                    sub_constraint_item = item.right if direction == "right" else item.down
+                    if sub_constraint_item.result is not None:
+                        recent_constraint_cell = sub_constraint_item
+            else:
+                connected_cells.append(item)
 
-                    if type(item) == ConstraintCell and item.down.result is not None:
-                        recent_constraint_cell = item
-                else:
-                    col_connected.append(item)
-            for connected_cell in col_connected:
-                tmp_col_connected = col_connected.copy()
-                tmp_col_connected.remove(connected_cell)
-                connected_cell.visible_cells += tmp_col_connected
-            if recent_constraint_cell and recent_constraint_cell.down.visible_cells == []:
-                recent_constraint_cell.down.size = len(col_connected)
-                recent_constraint_cell.down.visible_cells = col_connected
-            col_connected = []
-            recent_constraint_cell = None
+    def _set_all_visible_cells_relations(self) -> None:
+        for row in self.board:
+            self._set_line_relations(row, "right")
+
+        for col in self.iterate_cols():
+            self._set_line_relations(col, "down")
 
     def __str__(self):
         def get_val(p, i):
@@ -134,7 +116,7 @@ class KakoroBoard:
                         f"{p.down.result if p.down.result is not None else '': <2} \\ ")[i]
             return (' ' * 5, f'{f"  {p.value if p.value is not None else 0}": <5}', ' ' * 5)[i]
 
-        x_len, y_len = len(self.board[0]), len(self.board)
+        y_len, x_len = self.dimensions
         res = (x_len * 6 + 1) * "-" + '\n'
         for i in range(y_len):
             for k in range(3):

@@ -57,16 +57,16 @@ brute_force_iteration(l)
 print(l)
 s = ""
 counter = 0
-while s != str(l):
+progress = True
+while progress:
     counter += 1
-    s = str(l)
-    brute_force_iteration(l)
+    progress = brute_force_iteration(l)
 
 print(l)
 print(l.is_solved())
 print(counter)
 
-print(l.prety_block('1'))
+# print(l.prety_block('1'))
 
 """
  #   #   #    #    #   3\   16\  29\  #    17\  7\  #   # 
