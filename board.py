@@ -73,7 +73,7 @@ class KakoroBoard:
         col_connected: List[Cell] = []
         for y, row in enumerate(self.board):
             for x, item in enumerate(row):
-                if type(item) != Cell: # TODO (Eilon): Use isintance?
+                if type(item) != Cell:  # TODO (Eilon): Use isintance? - NOOOOO isinstance checks if the object is also a child of another object, and so if item is `BlackCell` the expression will be True!!
                     for connected_cell in row_connected:
                         tmp_row_connected = row_connected.copy()
                         tmp_row_connected.remove(connected_cell)
@@ -126,24 +126,20 @@ class KakoroBoard:
             recent_constraint_cell = None
 
     def __str__(self):
-        res = ""
-        for row in self.board:
-            for item in row:
-                res += str(item)
-            res += "\n"
+        def get_val(p, i):
+            if type(p) == BlackCell:
+                return '#####'
+            if type(p) == ConstraintCell:
+                return (f" \\ {p.right.result if p.right.result is not None else '': <2}", "  \\  ",
+                        f"{p.down.result if p.down.result is not None else '': <2} \\ ")[i]
+            return (' ' * 5, f'{f"  {p.value if p.value is not None else 0}": <5}', ' ' * 5)[i]
+
+        x_len, y_len = len(self.board[0]), len(self.board)
+        res = (x_len * 6 + 1) * "-" + '\n'
+        for i in range(y_len):
+            for k in range(3):
+                for j in range(x_len):
+                    res += f"|{get_val(self.board[i][j], k)}"
+                res += '|\n'
+            res += (x_len * 6 + 1) * "-" + '\n'
         return res
-
-    def prety_block(self, _thing):
-        thing = str(_thing)
-        s = 10
-
-        l = len(thing)
-        sides_spaces = ((s-2) - l) // 2
-        r_up = f"{'_' * s}\n"
-        r_mid = ('|' + (' ' * (s - 2)) + '|\n') * ((s//4) - 1)
-        r_thing = '|' + ((' ' * sides_spaces) + str(thing) + (' ' * sides_spaces)).zfill(s - 2) + '|\n'
-        return r_up + r_mid + r_thing + r_mid
-
-    def pretty_str(self):
-        res = ""
-        s= ''
