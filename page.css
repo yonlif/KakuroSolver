@@ -1,0 +1,20 @@
+.card {
+    width: 50px;
+}
+.col {
+    width: 50px;
+}
+.line {
+    width: 3%;
+    height: 135%;
+    position: absolute;
+    left: 2%;
+    top: 2%;
+    background: black;
+    transform: rotate(-45deg);
+    transform-origin: left top;
+}
+.normal {
+    padding-top: 23%;
+    align-items: center;
+}
