@@ -66,6 +66,7 @@ test_boards = [
 def test_all_boards():
     for b in test_boards:
         res = solve_loop(b)
+        print(b)
         assert res[1]
         print(res[0])
 

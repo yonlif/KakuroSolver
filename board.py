@@ -4,9 +4,15 @@ Location = Tuple[int, int]
 
 
 class Cell:
+    """
+    # TODO (Eilon): Switch `self.option_numbers` to be static?
+    OPTION_NUMBERS = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    # and every call to self.option_numbers will be switched to Cell.OPTION_NUMBERS
+    """
+
     def __init__(self, value=None, idx=None):
         self.idx = idx
-        self.option_numbers: List[int] = list(range(1, 10))
+        self.option_numbers: List[int] = [1, 2, 3, 4, 5, 6, 7, 8, 9]
         self.value: int = value
         self.visible_cells = []
 
@@ -36,6 +42,7 @@ class ConstraintCell(Cell):
     def __str__(self):
         def print_helper(num):
             return num if num else ''
+
         return f" {print_helper(self.down.result)}\\{print_helper(self.right.result)} "
 
 
@@ -48,12 +55,11 @@ class BlackCell(Cell):
         return " # "
 
 
-class KakoroBoard:
+class Board:
     def __init__(self, board: List[List[Cell]]):
         self.dimensions: Tuple[int, int] = (len(board), len(board[0]))
         assert all(len(row) == self.dimensions[1] for row in board)
         self.board: List[List[Cell]] = board
-        self._set_all_visible_cells_relations()
 
     def __eq__(self, other):
         if other.dimensions != self.dimensions:
@@ -73,40 +79,6 @@ class KakoroBoard:
         for x in range(self.dimensions[1]):
             yield [self.board[y][x] for y in range(self.dimensions[0])]
 
-    def is_solved(self):
-        return all([c.value > 0 if type(c) == Cell else True for row in self.board for c in row])
-
-    @staticmethod
-    def _set_line_relations(line: List[Cell], direction: str):
-        recent_constraint_cell: Optional[ConstraintCell] = None
-        connected_cells: List[Cell] = []
-        line = list(line) + [BlackCell()]
-        for item in line:
-            if type(item) != Cell:  # TODO (Eilon): Use isintance?
-                for connected_cell in connected_cells:
-                    tmp_row_connected = connected_cells.copy()
-                    tmp_row_connected.remove(connected_cell)
-                    connected_cell.visible_cells += tmp_row_connected
-                if recent_constraint_cell:
-                    recent_constraint_cell.size = len(connected_cells)
-                    recent_constraint_cell.visible_cells = connected_cells.copy()
-                    recent_constraint_cell = None
-                connected_cells = []
-
-                if type(item) == ConstraintCell:
-                    sub_constraint_item = item.right if direction == "right" else item.down
-                    if sub_constraint_item.result is not None:
-                        recent_constraint_cell = sub_constraint_item
-            else:
-                connected_cells.append(item)
-
-    def _set_all_visible_cells_relations(self) -> None:
-        for row in self.board:
-            self._set_line_relations(row, "right")
-
-        for col in self.iterate_cols():
-            self._set_line_relations(col, "down")
-
     def __str__(self):
         def get_val(p, i):
             if type(p) == BlackCell:
@@ -125,3 +97,60 @@ class KakoroBoard:
                 res += '|\n'
             res += (x_len * 6 + 1) * "-" + '\n'
         return res
+
+
+class KakoroBoard(Board):
+    def __init__(self, board: List[List[Cell]]):
+        super().__init__(board)
+        self._set_all_visible_cells_relations()
+
+    def is_solved(self):
+        return all(c.value > 0 if type(c) == Cell and c.value else True for row in self.board for c in row)
+
+    @staticmethod
+    def _set_line_relations(line: List[Cell], direction: str):
+        recent_constraint_cell: Optional[ConstraintCell] = None
+        connected_cells: List[Cell] = []
+        line = list(line) + [BlackCell()]
+        for item in line:
+            if type(item) != Cell:
+                for connected_cell in connected_cells:
+                    tmp_row_connected = connected_cells.copy()
+                    tmp_row_connected.remove(connected_cell)
+                    connected_cell.visible_cells += tmp_row_connected
+                if recent_constraint_cell:
+                    recent_constraint_cell.size = len(connected_cells)
+                    recent_constraint_cell.visible_cells = connected_cells.copy()
+                    recent_constraint_cell = None
+                connected_cells = []
+
+                if type(item) is ConstraintCell:
+                    sub_constraint_item = item.right if direction == "right" else item.down
+                    if sub_constraint_item.result is not None:
+                        recent_constraint_cell = sub_constraint_item
+            else:
+                connected_cells.append(item)
+
+    def _set_all_visible_cells_relations(self) -> None:
+        for row in self.board:
+            self._set_line_relations(row, "right")
+
+        for col in self.iterate_cols():
+            self._set_line_relations(col, "down")
+
+
+class KillerBoard(Board):
+    """
+    TODO (Eilon): Suggestion to killer suduku board:
+    Make cells within the same group have an id corresponding to the group, i.e.
+    Ask Eilon for an example...
+
+    Interesting Note:
+    A suduku board is 9x9, we can create a kakuru board that is 10x10 and put the killer inside, than the constraint of 1..9 is met?
+    i'm not sure, maybe we need to add that within the 3 by 3 cells there are no repeating numbers.
+
+
+    """
+
+    def __init__(self, board: List[List[Cell]]):
+        super().__init__(board)
